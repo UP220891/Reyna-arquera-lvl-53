@@ -1,0 +1,102 @@
+.asiento {
+    width: 30px;
+    height: 30px;
+    margin: 5px;
+    display: inline-block;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.disponible {
+    background-color: #4CAF50;
+}
+
+.ocupado {
+    background-color: #f44336;
+    cursor: not-allowed;
+}
+
+.reservado {
+    background-color: #FFC107;
+}
+* {
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+}
+
+* {
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background: #f0f2f5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding-top: 40px;
+    background-image: url('57405.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+h2 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+#login, #salas, #ticket, #logout {
+    background: #ffffff;
+    padding: 20px 30px;
+    margin: 15px 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+}
+
+input[type="text"],
+input[type="password"],
+select {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+button {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin-top: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+button:hover {
+    background: #2980b9;
+    
+}
+
+#peliculasContainer,
+#asientosContainer {
+    margin-top: 15px;
+}
+
+#detallesBoleto,
+#totalPgo {
+    margin: 10px 0;
+    color: #2d3436;
+}
+
+
+

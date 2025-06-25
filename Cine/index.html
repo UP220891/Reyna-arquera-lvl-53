@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Práctica Cine AJAX XML</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body onload="cargarPeliculas()">
+    <div id="login">
+        <h2>Iniciar Sesión</h2>
+        <input type="text" id="usuario" placeholder="Usuario">
+        <input type="password" id="contrasena" placeholder="Contraseña">
+        <button onclick="iniciarSesion()">Entrar</button>
+    </div>
+
+    <div id="salas" style="display:none;">
+        <h2>Seleccione Sala y Asientos</h2>
+        <select id="salaSeleccion" onchange="generarAsientos()">
+            <option value="1">Sala 1</option>
+            <option value="2">Sala 2</option>
+            <option value="3">Sala 3</option>
+        </select>
+        <div id="peliculasContainer"></div>
+        <div id="asientosContainer"></div>
+        <button onclick="comprar()">Comprar</button>
+    </div>
+
+    <div id="ticket" style="display:none;">
+        <h2>Boletos</h2>
+        <p id="detallesBoleto"></p>
+        <p id="totalPago"></p>
+    </div>
+
+    <div id="logout" style="display:none;">
+        <button onclick="cerrarSesion()">Cerrar Sesión</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
