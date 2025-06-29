@@ -97,6 +97,51 @@ button:hover {
     margin: 10px 0;
     color: #2d3436;
 }
+#contenido-empleado form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 320px;
+  background: #f8f9fa;
+  padding: 18px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px #0001;
+}
+
+#contenido-empleado label {
+  font-weight: 500;
+  color: #23283a;
+}
+
+#contenido-empleado input,
+#contenido-empleado select {
+  padding: 7px 10px;
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  margin-top: 4px;
+  font-size: 1em;
+}
+
+#contenido-empleado button[type="submit"] {
+  margin-top: 10px;
+  padding: 9px 0;
+  border-radius: 4px;
+  background: #23283a;
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#contenido-empleado button[type="submit"]:hover {
+  background: #39405a;
+}
+
+#msgCrearUsuario {
+  margin-top: 12px;
+  font-size: 1em;
+}
 
 
 

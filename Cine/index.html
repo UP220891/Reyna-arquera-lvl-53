@@ -8,22 +8,39 @@
 <body onload="cargarPeliculas()">
     <div id="login">
         <h2>Iniciar Sesión</h2>
-        <input type="text" id="usuario" placeholder="Usuario">
+        <input type="text" id="usuario" placeholder="Email">
         <input type="password" id="contrasena" placeholder="Contraseña">
         <button onclick="iniciarSesion()">Entrar</button>
+        <button onclick="registrar()">Registrar</button>
     </div>
-
-    <div id="salas" style="display:none;">
-        <h2>Seleccione Sala y Asientos</h2>
-        <select id="salaSeleccion" onchange="generarAsientos()">
-            <option value="1">Sala 1</option>
-            <option value="2">Sala 2</option>
-            <option value="3">Sala 3</option>
-        </select>
-        <div id="peliculasContainer"></div>
-        <div id="asientosContainer"></div>
-        <button onclick="comprar()">Comprar</button>
+<div id="registro" style="display:none;">
+        <h2>Registro</h2>
+        <input type="text" id="nombreRegistro" placeholder="Nombre">
+        <input type="text" id="emailRegistro" placeholder="Email">
+        <input type="password" id="contrasenaRegistro" placeholder="Contraseña">
+        <button onclick="registrarUsuario()">Registrar</button>
+        <button onclick="cancelarRegistro()">Cancelar</button>
     </div>
+<div id="panel-empleado" style="display:none;">
+  <h2>Panel del Empleado</h2>
+  <button onclick="mostrarCrearUsuario()">CREAR USUARIO</button>
+  <button onclick="mostrarAgregarFuncion()">AGREGAR FUNCIÓN</button>
+  <button onclick="mostrarAgregarSala()">AGREGAR SALA</button>
+  <button onclick="mostrarAgregarPelicula()">AGREGAR PELÍCULA</button>
+  <button onclick="mostrarVentaEmpleado()">VENDER BOLETOS</button>
+  <button onclick="mostrarConsultas()">CONSULTAS Y REPORTES</button>
+  <div id="contenido-empleado"></div>
+</div>
+   <div id="salas" style="display:none;">
+    <h2>Seleccione Función y Asientos</h2>
+    <select id="funcionSeleccion" onchange="generarAsientosUsuario()">
+        <option disabled selected>Seleccione función</option>
+        <!-- Opciones generadas por JS -->
+    </select>
+    <div id="infoFuncion"></div>
+    <div id="asientosContainer"></div>
+    <button onclick="comprar()">Comprar</button>
+</div>
 
     <div id="ticket" style="display:none;">
         <h2>Boletos</h2>

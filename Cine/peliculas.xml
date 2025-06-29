@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<peliculas>
+    <pelicula id="1" categoria="Acción">
+        <titulo>Rápidos y Furiosos 9</titulo>
+    </pelicula>
+    <pelicula id="2" categoria="Comedia">
+        <titulo>Un Jefe en Pañales</titulo>
+    </pelicula>
+    <pelicula id="3" categoria="Terror">
+        <titulo>El Conjuro 3</titulo>
+    </pelicula>
+    <pelicula id="4" categoria="Familiar">
+        <titulo>Lilo y Stitch</titulo>
+    </pelicula>
+    <pelicula id="5" categoria="Familiar">
+        <titulo>Karate Kid</titulo>
+    </pelicula>
+</peliculas>

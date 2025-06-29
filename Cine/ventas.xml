@@ -1,0 +1,11 @@
+<ventas>
+  <venta>
+    <pelicula>El conjuro 3</pelicula>
+    <sala>2</sala>
+    <asiento>
+      <fila>B</fila>
+      <numero>5</numero>
+    </asiento>
+    <costo>75</costo>
+  </venta>
+</ventas>
