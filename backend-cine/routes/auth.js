@@ -32,8 +32,10 @@ router.post('/login', async (req, res) => {
   res.json({
     ok: true,
     user: user.email,
-    id: user._id,
-    rol: user.rol
+    usuarioId: user._id,
+    rol: user.rol,
+    membresia: user.membresia,  
+    nombre: user.nombre // <-- agrega esto
   });
 });
 

@@ -7,23 +7,47 @@ const Pelicula = require('../modelos/pelicula');
 
 // Registrar una venta
 router.post('/', async (req, res) => {
-   console.log('POST /api/ventas body:', req.body); // <--- agrega esto
+  console.log('POST /api/ventas body:', req.body);
   const { usuarioId, funcionId, total, asientos, membresia, empleadoId } = req.body;
   try {
     // Busca la función y la película asociada
     const funcion = await Funcion.findById(funcionId).populate('pelicula');
     if (!funcion) return res.status(404).json({ error: 'Función no encontrada' });
 
+    // Busca el usuario para saber si tiene membresía
+   let totalVenta = total;
+let esMembresia = false;
+let usuario = null;
+
+if (usuarioId) {
+  usuario = await Usuario.findById(usuarioId);
+  if (usuario && usuario.membresia) {
+    totalVenta = Math.round(total * 0.9); // 10% de descuento
+    esMembresia = true;
+  }
+} else if (membresia) {
+  // Venta de taquilla con membresía marcada manualmente
+  totalVenta = Math.round(total * 0.9);
+  esMembresia = true;
+}
     const venta = await Venta.create({
       usuario: usuarioId,
-      empleado: empleadoId || usuarioId, // Si no hay empleado, es autoventa
+      empleado: empleadoId || usuarioId,
       funcion: funcionId,
       pelicula: funcion.pelicula._id,
-      total,
+      total: totalVenta,
       asientos,
-      membresia
+      membresia: esMembresia
     });
-    res.json({ ok: true, ventaId: venta._id });
+
+    // --- Poblar usuario y funcion (con pelicula y sala) ---
+    const ventaCompleta = await Venta.findById(venta._id)
+      .populate('usuario')
+      .populate({
+        path: 'funcion',
+        populate: [{ path: 'pelicula' }, { path: 'sala' }]
+      });
+    res.json({ ok: true, venta: ventaCompleta });
   } catch (e) {
     res.status(400).json({ error: 'Error al guardar venta' });
   }

@@ -1,6 +1,10 @@
-let nombreUsuario = "";
-
 const API_URL = "http://localhost:3000/api";
+
+let nombreUsuario = "";
+let usuarioMembresia = false;
+let funcionesDisponibles = []; 
+let usuarioId = null;
+let nombreRealUsuario = "";
 
 // ========== INICIO Y CIERRE DE SESIÓN ==========
 async function iniciarSesion() {
@@ -16,6 +20,9 @@ async function iniciarSesion() {
     const data = await res.json();
     if (res.ok) {
       nombreUsuario = email;
+      usuarioMembresia = !!data.membresia; // Agrega la membresía si existe
+      usuarioId = data.usuarioId;
+      nombreRealUsuario = data.nombre; // Agrega el nombre real del usuario
       document.getElementById("login").style.display = "none";
       document.getElementById("logout").style.display = "block";
       if (data.rol === "empleado") {
@@ -50,6 +57,7 @@ function cargarFuncionesUsuario() {
   fetch(`${API_URL}/funciones`)
     .then(res => res.json())
     .then(funciones => {
+        funcionesDisponibles = funciones; // <-- Esto es clave
       const select = document.getElementById("funcionSeleccion");
       if (!select) return;
       select.innerHTML = `<option disabled selected>Seleccione función</option>`;
@@ -119,32 +127,54 @@ function comprar() {
   reservados.forEach(a => {
     asientos.push({ fila: a.dataset.fila, numero: a.dataset.numero });
   });
-  let total = asientos.length * 75;
 
+  // Busca la función seleccionada para mostrar detalles
+  const funcion = funcionesDisponibles.find(f => f._id === funcionId);
+  if (!funcion) {
+    alert("No se encontró la función seleccionada.");
+    return;
+  }
+
+  // Aplica descuento si tiene membresía
+  let total = asientos.length * 75;
+  let totalOriginal = total;
+  let tieneMembresia = usuarioMembresia === true;
+  if (tieneMembresia) {
+    total = Math.round(total * 0.9);
+  }
   fetch(`${API_URL}/ventas`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      usuarioId: null,
+      usuarioId,
       funcionId,
       total,
       asientos,
-      membresia: false
+      membresia: tieneMembresia
     })
   })
     .then(res => res.json())
     .then(data => {
-      if (data.ok) {
-        document.getElementById("ticket").style.display = "block";
-        document.getElementById("detallesBoleto").innerHTML = `Función: ${funcionId}<br>Asientos: ${asientos.map(a => `${a.fila}-${a.numero}`).join(", ")}`;
-        document.getElementById("totalPago").textContent = "Total: $" + total;
-        generarAsientosUsuario();
-      } else {
-        alert(data.error || "Error al comprar.");
-      }
-    });
+  if (data.ok) {
+    document.getElementById("ticket").style.display = "block";
+    // Muestra detalles bonitos
+    let detalles = `<strong>Usuario:</strong> ${nombreRealUsuario}<br>`; // <-- Agrega esta línea
+    detalles += `<strong>Película:</strong> ${funcion.pelicula.titulo}<br>`;
+    detalles += `<strong>Sala:</strong> ${funcion.sala.nombre}<br>`;
+    detalles += `<strong>Hora:</strong> ${funcion.hora}<br>`;
+    detalles += `<strong>Asientos:</strong> ${asientos.map(a => `${a.fila}-${a.numero}`).join(", ")}<br>`;
+    if (tieneMembresia) {
+      detalles += `<strong>Subtotal:</strong> $${totalOriginal}<br>`;
+      detalles += `<strong>Descuento membresía (10%):</strong> -$${totalOriginal - total}<br>`;
+    }
+    document.getElementById("detallesBoleto").innerHTML = detalles;
+    document.getElementById("totalPago").textContent = "Total: $" + total;
+    generarAsientosUsuario();
+  } else {
+    alert(data.error || "Error al comprar.");
+  }
+});
 }
-
 // ========== PANEL EMPLEADO Y OTRAS FUNCIONES ==========
 
 function cargarPeliculas() {
@@ -439,156 +469,222 @@ function mostrarAgregarPelicula() {
 }
 
 function mostrarVentaEmpleado() {
-  fetch(`${API_URL}/funciones`)
-    .then(res => res.json())
-    .then(funciones => {
-      if (!funciones.length) {
-        document.getElementById("contenido-empleado").innerHTML = "<h3>No hay funciones disponibles</h3>";
+  Promise.all([
+    fetch(`${API_URL}/funciones`).then(res => res.json()),
+    fetch(`${API_URL}/usuarios`).then(res => res.json())
+  ]).then(([funciones, usuarios]) => {
+    console.log("Usuarios recibidos:", usuarios);
+    if (!funciones.length) {
+      document.getElementById("contenido-empleado").innerHTML = "<h3>No hay funciones disponibles</h3>";
+      return;
+    }
+   let html = `
+  <h3>Venta de Boletos (Taquilla)</h3>
+  <form id="formVentaEmpleado">
+    <label>Selecciona usuario:</label>
+    <select id="usuarioVenta" required>
+      <option disabled selected>Selecciona usuario</option>
+      ${usuarios.filter(u => u.rol === "cliente").map(u =>
+        `<option value="${u._id}" data-membresia="${u.membresia}">${u.nombre} (${u.email})</option>`
+      ).join('')}
+    </select>
+    <label>¿Tiene membresía?</label>
+    <select id="membresiaCliente" required disabled>
+      <option value="0">No</option>
+      <option value="1">Sí</option>
+    </select>
+    <label>Función:</label>
+    <select id="funcionVenta" required>
+      <option disabled selected>Seleccione función</option>
+      ${funciones.map(f =>
+        `<option value="${f._id}">${f.pelicula.titulo} - Sala ${f.sala.nombre} - ${f.hora}</option>`
+      ).join('')}
+    </select>
+  </form>
+  <div id="asientosEmpleadoContainer"></div>
+  <button id="btnVenderEmpleado" style="display:none;">Vender</button>
+  <div id="msgVentaEmpleado"></div>
+`;
+
+document.getElementById("contenido-empleado").innerHTML = html;
+
+// Autocompleta membresía al seleccionar usuario
+document.getElementById("usuarioVenta").addEventListener("change", function () {
+  const selected = this.options[this.selectedIndex];
+  usuarioSeleccionado = usuarios.find(u => u._id === selected.value);
+  document.getElementById("membresiaCliente").value = selected.getAttribute("data-membresia") === "true" ? "1" : "0";
+});
+
+    document.getElementById("funcionVenta").addEventListener("change", function () {
+      const funcionId = this.value;
+      funcionSeleccionada = funciones.find(f => f._id == funcionId);
+      generarAsientosEmpleado(funcionSeleccionada);
+    });
+
+    function generarAsientosEmpleado(funcion) {
+      const cont = document.getElementById("asientosEmpleadoContainer");
+      cont.innerHTML = "";
+      if (!funcion) return;
+
+      const pantallaDiv = document.createElement("div");
+      pantallaDiv.className = "pantalla-guia";
+      pantallaDiv.textContent = "Pantalla";
+      cont.appendChild(pantallaDiv);
+
+      const filas = [];
+      for (let i = 0; i < 10; i++) {
+        filas.push(String.fromCharCode(65 + i));
+      }
+      const asientosPorFila = 7;
+
+      fetch(`${API_URL}/ventas/tickets?funcionId=${funcion._id}`)
+        .then(res => res.json())
+        .then(asientosOcupados => {
+          const ocupadosSet = new Set(asientosOcupados.map(a => `${a.fila}-${a.numero}`));
+          for (let fila of filas) {
+            const filaDiv = document.createElement("div");
+            filaDiv.style.marginBottom = "8px";
+            for (let i = 1; i <= asientosPorFila; i++) {
+              const div = document.createElement("div");
+              div.className = "asiento disponible";
+              div.dataset.fila = fila;
+              div.dataset.numero = i;
+              div.innerHTML = `${fila}-${i}`;
+              div.style.fontSize = "0.85em";
+              div.style.lineHeight = "38px";
+              const key = `${fila}-${i}`;
+              if (ocupadosSet.has(key)) {
+                div.classList.remove("disponible");
+                div.classList.add("ocupado");
+              }
+              div.onclick = () => {
+                if (!div.classList.contains("ocupado")) {
+                  div.classList.toggle("reservado");
+                }
+              };
+              filaDiv.appendChild(div);
+            }
+            cont.appendChild(filaDiv);
+          }
+          document.getElementById("btnVenderEmpleado").style.display = "block";
+        });
+    }
+
+    document.getElementById("btnVenderEmpleado").onclick = function () {
+      const reservados = document.querySelectorAll("#asientosEmpleadoContainer .asiento.reservado");
+      if (reservados.length === 0) {
+        document.getElementById("msgVentaEmpleado").innerHTML = `<span style="color:red;">Selecciona al menos un asiento.</span>`;
         return;
       }
-      let html = `
-        <h3>Venta de Boletos (Taquilla)</h3>
-        <form id="formVentaEmpleado">
-          <label>Nombre del cliente:</label>
-          <input type="text" id="nombreCliente" required>
-          <label>¿Tiene membresía?</label>
-          <select id="membresiaCliente" required>
-            <option value="0">No</option>
-            <option value="1">Sí</option>
-          </select>
-          <label>Función:</label>
-          <select id="funcionVenta" required>
-            <option disabled selected>Seleccione función</option>
-            ${funciones.map(f =>
-              `<option value="${f._id}">${f.pelicula.titulo} - Sala ${f.sala.nombre} - ${f.hora}</option>`
-            ).join('')}
-          </select>
-        </form>
-        <div id="asientosEmpleadoContainer"></div>
-        <button id="btnVenderEmpleado" style="display:none;">Vender</button>
-        <div id="msgVentaEmpleado"></div>
-      `;
-      document.getElementById("contenido-empleado").innerHTML = html;
+      if (!funcionSeleccionada) {
+        document.getElementById("msgVentaEmpleado").innerHTML = `<span style="color:red;">Selecciona una función.</span>`;
+        return;
+      }
+      if (!usuarioSeleccionado) {
+        document.getElementById("msgVentaEmpleado").innerHTML = `<span style="color:red;">Selecciona un usuario.</span>`;
+        return;
+      }
+      const nombre = usuarioSeleccionado.nombre;
+      const membresia = usuarioSeleccionado.membresia === true;
 
-      let funcionSeleccionada = null;
-
-      document.getElementById("funcionVenta").addEventListener("change", function () {
-        const funcionId = this.value;
-        funcionSeleccionada = funciones.find(f => f._id == funcionId);
-        generarAsientosEmpleado(funcionSeleccionada);
+      const asientos = [];
+      reservados.forEach(a => {
+        asientos.push({ fila: a.dataset.fila, numero: a.dataset.numero });
       });
 
-      function generarAsientosEmpleado(funcion) {
-        const cont = document.getElementById("asientosEmpleadoContainer");
-        cont.innerHTML = "";
-        if (!funcion) return;
-
-        const pantallaDiv = document.createElement("div");
-        pantallaDiv.className = "pantalla-guia";
-        pantallaDiv.textContent = "Pantalla";
-        cont.appendChild(pantallaDiv);
-
-        const filas = [];
-        for (let i = 0; i < 10; i++) {
-          filas.push(String.fromCharCode(65 + i));
-        }
-        const asientosPorFila = 7;
-
-        fetch(`${API_URL}/ventas/tickets?funcionId=${funcion._id}`)
-          .then(res => res.json())
-          .then(asientosOcupados => {
-            const ocupadosSet = new Set(asientosOcupados.map(a => `${a.fila}-${a.numero}`));
-            for (let fila of filas) {
-              const filaDiv = document.createElement("div");
-              filaDiv.style.marginBottom = "8px";
-              for (let i = 1; i <= asientosPorFila; i++) {
-                const div = document.createElement("div");
-                div.className = "asiento disponible";
-                div.dataset.fila = fila;
-                div.dataset.numero = i;
-                div.innerHTML = `${fila}-${i}`;
-                div.style.fontSize = "0.85em";
-                div.style.lineHeight = "38px";
-                const key = `${fila}-${i}`;
-                if (ocupadosSet.has(key)) {
-                  div.classList.remove("disponible");
-                  div.classList.add("ocupado");
-                }
-                div.onclick = () => {
-                  if (!div.classList.contains("ocupado")) {
-                    div.classList.toggle("reservado");
-                  }
-                };
-                filaDiv.appendChild(div);
-              }
-              cont.appendChild(filaDiv);
-            }
-            document.getElementById("btnVenderEmpleado").style.display = "block";
-          });
+      let total = asientos.length * 75;
+      let totalOriginal = total;
+      if (membresia) {
+        total = Math.round(total * 0.9);
       }
 
-      document.getElementById("btnVenderEmpleado").onclick = function () {
-        const reservados = document.querySelectorAll("#asientosEmpleadoContainer .asiento.reservado");
-        if (reservados.length === 0) {
-          document.getElementById("msgVentaEmpleado").innerHTML = `<span style="color:red;">Selecciona al menos un asiento.</span>`;
-          return;
-        }
-        if (!funcionSeleccionada) {
-          document.getElementById("msgVentaEmpleado").innerHTML = `<span style="color:red;">Selecciona una función.</span>`;
-          return;
-        }
-        const nombre = document.getElementById("nombreCliente").value.trim();
-        const membresia = document.getElementById("membresiaCliente").value === "1";
-
-        const asientos = [];
-        reservados.forEach(a => {
-          asientos.push({ fila: a.dataset.fila, numero: a.dataset.numero });
-        });
-
-        let total = asientos.length * 75;
-        let totalOriginal = total;
-        if (membresia) {
-          total = Math.round(total * 0.9);
-        }
-
-        fetch(`${API_URL}/ventas`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            usuarioId: null,
-            funcionId: funcionSeleccionada._id,
-            total,
-            asientos,
-            membresia
-          })
+      fetch(`${API_URL}/ventas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usuarioId: usuarioSeleccionado._id,
+          funcionId: funcionSeleccionada._id,
+          total,
+          asientos,
+          membresia
         })
-          .then(res => res.json())
-          .then(data => {
-            if (data.ok) {
-              document.getElementById("msgVentaEmpleado").innerHTML = `<span style="color:limegreen;">Venta realizada correctamente</span>`;
-              generarAsientosEmpleado(funcionSeleccionada);
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok) {
+            document.getElementById("msgVentaEmpleado").innerHTML = `<span style="color:limegreen;">Venta realizada correctamente</span>`;
+            generarAsientosEmpleado(funcionSeleccionada);
 
-              let detalles = `<strong>Cliente:</strong> ${nombre}<br>`;
-              detalles += `<strong>Película:</strong> ${funcionSeleccionada.pelicula.titulo}<br>`;
-              detalles += `<strong>Sala:</strong> ${funcionSeleccionada.sala.nombre}<br>`;
-              detalles += `<strong>Hora:</strong> ${funcionSeleccionada.hora}<br>`;
-              detalles += `<strong>Asientos:</strong><br>`;
-              asientos.forEach(a => {
-                detalles += `${a.fila}-${a.numero}<br>`;
-              });
-              if (membresia) {
-                detalles += `<strong>Subtotal:</strong> $${totalOriginal}<br>`;
-                detalles += `<strong>Descuento membresía (10%):</strong> -$${totalOriginal - total}<br>`;
-              }
-              detalles += `<strong>Total:</strong> $${total}`;
-              document.getElementById("msgVentaEmpleado").innerHTML += `<div style="margin-top:18px;background:#23283a;padding:12px;border-radius:8px;">${detalles}</div>`;
-            } else {
-              document.getElementById("msgVentaEmpleado").innerHTML = `<span style="color:red;">${data.error || "Error al vender"}</span>`;
+            let detalles = `<strong>Cliente:</strong> ${nombre}<br>`;
+            detalles += `<strong>Película:</strong> ${funcionSeleccionada.pelicula.titulo}<br>`;
+            detalles += `<strong>Sala:</strong> ${funcionSeleccionada.sala.nombre}<br>`;
+            detalles += `<strong>Hora:</strong> ${funcionSeleccionada.hora}<br>`;
+            detalles += `<strong>Asientos:</strong><br>`;
+            asientos.forEach(a => {
+              detalles += `${a.fila}-${a.numero}<br>`;
+            });
+            if (membresia) {
+              detalles += `<strong>Subtotal:</strong> $${totalOriginal}<br>`;
+              detalles += `<strong>Descuento membresía (10%):</strong> -$${totalOriginal - total}<br>`;
             }
-          })
-          .catch(() => {
-            document.getElementById("msgVentaEmpleado").innerHTML = `<span style="color:red;">Error de conexión</span>`;
-          });
-      };
+            detalles += `<strong>Total:</strong> $${total}`;
+            document.getElementById("msgVentaEmpleado").innerHTML += `<div style="margin-top:18px;background:#23283a;padding:12px;border-radius:8px;">${detalles}</div>`;
+          } else {
+            document.getElementById("msgVentaEmpleado").innerHTML = `<span style="color:red;">${data.error || "Error al vender"}</span>`;
+          }
+        })
+        .catch(() => {
+          document.getElementById("msgVentaEmpleado").innerHTML = `<span style="color:red;">Error de conexión</span>`;
+        });
+    };
+  });
+}
+function consultaNumClientes() {
+  fetch(`${API_URL}/ventas/clientes`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("contenido-empleado").innerHTML = `
+        <h3>Número de clientes atendidos</h3>
+        <strong>Total de clientes atendidos:</strong> ${data.numClientes}
+        <br><button onclick="mostrarConsultas()" class="btn-action">Volver</button>
+      `;
+    })
+    .catch(() => {
+      document.getElementById("contenido-empleado").innerHTML = `<span style="color:red;">Error de conexión</span>`;
+    });
+}
+function consultaVentasMembresia(conMembresia) {
+  fetch(`${API_URL}/ventas/membresia/${conMembresia}`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("contenido-empleado").innerHTML = `
+        <h3>Total de ventas a clientes ${conMembresia ? "con" : "sin"} membresía</h3>
+        <strong>Cantidad de ventas:</strong> ${data.cantidad}
+        <br><button onclick="mostrarConsultas()" class="btn-action">Volver</button>
+      `;
+    })
+    .catch(() => {
+      document.getElementById("contenido-empleado").innerHTML = `<span style="color:red;">Error de conexión</span>`;
+    });
+}
+function consultaBoletosPorPelicula() {
+  fetch(`${API_URL}/ventas/boletos-por-pelicula`)
+    .then(res => res.json())
+    .then(data => {
+      let html = `<h3>Total de boletos vendidos por película</h3>`;
+      if (data.length === 0) {
+        html += `<p>No hay ventas registradas.</p>`;
+      } else {
+        html += `<table border="1" style="margin-top:10px;"><tr><th>Película</th><th>Boletos vendidos</th></tr>`;
+        data.forEach(p => {
+          html += `<tr><td>${p.titulo}</td><td>${p.boletos}</td></tr>`;
+        });
+        html += `</table>`;
+      }
+      html += `<br><button onclick="mostrarConsultas()" class="btn-action">Volver</button>`;
+      document.getElementById("contenido-empleado").innerHTML = html;
+    })
+    .catch(() => {
+      document.getElementById("contenido-empleado").innerHTML = `<span style="color:red;">Error de conexión</span>`;
     });
 }

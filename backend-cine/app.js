@@ -18,11 +18,13 @@ const salaRoutes = require('./routes/salaRoute');
 const ventaRoute = require('./routes/ventaRoute');
 const peliculaRoute = require('./routes/peliculaRoute');
 const funcionRoute = require('./routes/funcionRoute');
+const usuarioRoutes = require('./routes/usuarioRoutes');
 
 app.use('/api/peliculas', peliculaRoute);
 app.use('/api/funciones', funcionRoute);
 app.use('/api/ventas', ventaRoute);
 app.use('/api/auth', authRoutes);
+app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/salas', salaRoutes);
 
 
