@@ -7,7 +7,7 @@ let usuarioId = null;
 let nombreRealUsuario = "";
 
 // ========== ALERTAS BONITAS ==========
-function mostrarAlerta(selector, mensaje, tipo = "exito", tiempo = 10000) {
+function mostrarAlerta(selector, mensaje, tipo = "exito", tiempo = 2000) {
   const clases = {
     exito: "mensaje-exito",
     error: "mensaje-error",
@@ -69,42 +69,66 @@ function cerrarSesion() {
   document.getElementById("login").style.display = "block";
   document.getElementById("salas").style.display = "none";
   document.getElementById("panel-empleado").style.display = "none";
+  document.getElementById("registro").style.display = "none";
   document.getElementById("logout").style.display = "none";
   document.getElementById("ticket").style.display = "none";
   document.getElementById("usuario").value = "";
   document.getElementById("contrasena").value = "";
   document.getElementById("boletosCompradosUsuario").innerHTML = "";
   document.getElementById("btnDescargarPDF").style.display = "none";
+  document.getElementById("asientosContainer").innerHTML = "";
+  window.funcionSeleccionadaId = null; // <-- Limpia la función seleccionada
+
 }
 
 // ========== USUARIO: SELECCIÓN DE FUNCIÓN Y ASIENTOS ==========
 function cargarFuncionesUsuario() {
+   window.funcionSeleccionadaId = null;
+  document.getElementById("asientosContainer").innerHTML = ""; // <-- Limpia asientos
+  document.getElementById("boletosCompradosUsuario").innerHTML = ""; // <-- Limpia boletos comprados // <-- Limpia la función seleccionada
   fetch(`${API_URL}/funciones`)
     .then(res => res.json())
     .then(funciones => {
       funcionesDisponibles = funciones;
-      const select = document.getElementById("funcionSeleccion");
-      if (!select) return;
-      select.innerHTML = `<option disabled selected>Seleccione función</option>`;
-      if (Array.isArray(funciones)) {
-        funciones.forEach(f => {
-          if (f.pelicula && f.sala) {
-            select.innerHTML += `<option value="${f._id}">${f.pelicula.titulo} - Sala ${f.sala.nombre} - ${f.hora}</option>`;
-          }
-        });
+      const container = document.getElementById("funcionesContainer");
+      container.innerHTML = "";
+      if (!Array.isArray(funciones) || funciones.length === 0) {
+        container.innerHTML = "<p>No hay funciones disponibles.</p>";
+        return;
       }
-      // --- Elimina listeners previos antes de agregar uno nuevo ---
-      const newSelect = select.cloneNode(true);
-      select.parentNode.replaceChild(newSelect, select);
-      newSelect.addEventListener("change", () => {
-        generarAsientosUsuario();
-        mostrarBoletosComprados();
+      funciones.forEach(f => {
+        if (f.pelicula && f.sala) {
+          const card = document.createElement("div");
+          card.className = "funcion-card";
+          card.innerHTML = `
+            <div class="funcion-titulo">${f.pelicula.titulo}</div>
+            <div class="funcion-info">Sala: <b>${f.sala.nombre}</b></div>
+            <div class="funcion-info">Hora: <b>${f.hora}</b></div>
+          `;
+          card.onclick = () => {
+            seleccionarFuncion(f._id);
+          };
+          container.appendChild(card);
+        }
       });
     });
 }
 
-function generarAsientosUsuario() {
-  const funcionId = document.getElementById("funcionSeleccion").value;
+function seleccionarFuncion(funcionId) {
+  // Marca la tarjeta seleccionada
+  document.querySelectorAll('.funcion-card').forEach(card => card.classList.remove('seleccionada'));
+  const selectedCard = Array.from(document.querySelectorAll('.funcion-card')).find(card =>
+    card.innerHTML.includes(funcionesDisponibles.find(f => f._id === funcionId).pelicula.titulo)
+  );
+  if (selectedCard) selectedCard.classList.add('seleccionada');
+  // Guarda el id seleccionado en una variable global
+  window.funcionSeleccionadaId = funcionId;
+  generarAsientosUsuario(funcionId);
+  mostrarBoletosComprados(funcionId);
+}
+
+function generarAsientosUsuario(funcionId) {
+  funcionId = funcionId || window.funcionSeleccionadaId;
   const cont = document.getElementById("asientosContainer");
   cont.innerHTML = "";
   if (!funcionId) return;
@@ -152,7 +176,7 @@ function generarAsientosUsuario() {
 }
 
 function comprar() {
-  const funcionId = document.getElementById("funcionSeleccion").value;
+  const funcionId = window.funcionSeleccionadaId; // <-- usa la variable global
   const reservados = document.querySelectorAll("#asientosContainer .asiento.reservado");
   if (!funcionId || reservados.length === 0) {
     mostrarAlerta("#msgCompra", "Selecciona una función y al menos un asiento.", "warning");
@@ -322,7 +346,7 @@ function mostrarCrearUsuario() {
           <option value="empleado">Empleado</option>
         </select>
       </label>
-      <label>¿Tiene membresía?
+      <label id="labelMembresia">¿Tiene membresía?
         <select id="nuevoMembresia" required>
           <option value="0">No</option>
           <option value="1">Sí</option>
@@ -333,28 +357,50 @@ function mostrarCrearUsuario() {
     <div id="msgCrearUsuario" style="margin-top:10px;"></div>
   `;
 
+  // Mostrar/ocultar membresía según el rol
+  document.getElementById("nuevoRol").addEventListener("change", function() {
+    const esCliente = this.value === "cliente";
+    document.getElementById("labelMembresia").style.display = esCliente ? "block" : "none";
+    document.getElementById("nuevoMembresia").disabled = !esCliente;
+  });
+  // Inicializa el estado al cargar
+  document.getElementById("nuevoRol").dispatchEvent(new Event("change"));
+
   document.getElementById("formCrearUsuario").onsubmit = function(e) {
     e.preventDefault();
     const nombre = document.getElementById("nuevoUsuario").value.trim();
     const email = document.getElementById("nuevoEmail").value.trim();
     const contraseña = document.getElementById("nuevoContrasena").value;
     const rol = document.getElementById("nuevoRol").value;
-    const membresia = document.getElementById("nuevoMembresia").value === "1";
-    fetch(`${API_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre, email, contraseña, rol, membresia })
-    })
+    // Solo toma membresía si es cliente
+    const membresia = rol === "cliente" && document.getElementById("nuevoMembresia").value === "1";
+
+    // Validar si ya existe un usuario con ese email
+    fetch(`${API_URL}/usuarios`)
       .then(res => res.json())
-      .then(data => {
-        if (data.ok) {
-          mostrarAlerta("#msgCrearUsuario", "Usuario creado correctamente", "exito");
-          setTimeout(() => mostrarCrearUsuario(), 1500);
-        } else {
-          mostrarAlerta("#msgCrearUsuario", data.error || "Error al crear usuario", "error");
+      .then(usuarios => {
+        const existe = usuarios.some(u => u.email.toLowerCase() === email.toLowerCase());
+        if (existe) {
+          mostrarAlerta("#msgCrearUsuario", "Ya existe un usuario con ese email.", "error");
+          return;
         }
-      })
-      .catch(() => mostrarAlerta("#msgCrearUsuario", "Error de conexión", "error"));
+        // Si no existe, lo crea
+        fetch(`${API_URL}/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre, email, contraseña, rol, membresia })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.ok) {
+              mostrarAlerta("#msgCrearUsuario", "Usuario creado correctamente", "exito");
+              setTimeout(() => mostrarCrearUsuario(), 1500);
+            } else {
+              mostrarAlerta("#msgCrearUsuario", data.error || "Error al crear usuario", "error");
+            }
+          })
+          .catch(() => mostrarAlerta("#msgCrearUsuario", "Error de conexión", "error"));
+      });
   };
 }
 
@@ -389,13 +435,16 @@ document.getElementById("formAgregarFuncion").onsubmit = function(e) {
   const salaId = document.getElementById("funcionSala").value;
   const hora = document.getElementById("funcionHora").value;
 
-  // Validación: buscar si ya existe función en esa sala y hora
+  // Validación: buscar si ya existe función en esa sala y hora o misma película/sala/hora
   fetch(`${API_URL}/funciones`)
     .then(res => res.json())
     .then(funciones => {
-      const conflicto = funciones.some(f => f.sala._id === salaId && f.hora === hora);
+      const conflicto = funciones.some(f =>
+        (f.sala._id === salaId && f.hora === hora) ||
+        (f.pelicula._id === peliculaId && f.sala._id === salaId && f.hora === hora)
+      );
       if (conflicto) {
-        mostrarAlerta("#msgFuncion", "Ya existe una función en esa sala y hora.", "error");
+        mostrarAlerta("#msgFuncion", "Ya existe una función con esa película, sala y hora.", "error");
         return;
       }
 
@@ -418,6 +467,52 @@ document.getElementById("formAgregarFuncion").onsubmit = function(e) {
     });
 };
   });
+}
+function mostrarAgregarPelicula() {
+  document.getElementById("contenido-empleado").innerHTML = `
+    <h3>Agregar Película</h3>
+    <form id="formAgregarPelicula">
+      <label>Título:</label>
+      <input type="text" id="tituloPelicula" required>
+      <label>Categoría:</label>
+      <input type="text" id="categoriaPelicula" required>
+      <button type="submit">Agregar Película</button>
+    </form>
+    <div id="msgPelicula"></div>
+  `;
+
+  document.getElementById("formAgregarPelicula").onsubmit = function(e) {
+    e.preventDefault();
+    const titulo = document.getElementById("tituloPelicula").value.trim();
+    const categoria = document.getElementById("categoriaPelicula").value.trim();
+
+    // Validar si ya existe una película con ese título (case-insensitive)
+    fetch(`${API_URL}/peliculas`)
+      .then(res => res.json())
+      .then(peliculas => {
+        const existe = peliculas.some(p => p.titulo.toLowerCase() === titulo.toLowerCase());
+        if (existe) {
+          mostrarAlerta("#msgPelicula", "Ya existe una película con ese título.", "error");
+          return;
+        }
+        // Si no existe, la agrega
+        fetch(`${API_URL}/peliculas`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ titulo, categoria })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.ok) {
+              mostrarAlerta("#msgPelicula", "Película agregada correctamente", "exito");
+              setTimeout(() => mostrarAgregarPelicula(), 1500);
+            } else {
+              mostrarAlerta("#msgPelicula", data.error || "Error al agregar película", "error");
+            }
+          })
+          .catch(() => mostrarAlerta("#msgPelicula", "Error de conexión", "error"));
+      });
+  };
 }
 
 function mostrarConsultas() {
@@ -465,56 +560,75 @@ function mostrarAgregarSala() {
   document.getElementById("formAgregarSala").onsubmit = function(e) {
     e.preventDefault();
     const nombre = document.getElementById("nombreSala").value.trim();
-    fetch(`${API_URL}/salas`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre })
-    })
+
+    // Validar si ya existe una sala con ese nombre (case-insensitive)
+    fetch(`${API_URL}/salas`)
       .then(res => res.json())
-      .then(data => {
-        if (data.ok) {
-          mostrarAlerta("#msgSala", "Sala agregada correctamente", "exito");
-          setTimeout(() => mostrarAgregarSala(), 1500);
-        } else {
-          mostrarAlerta("#msgSala", data.error || "Error al agregar sala", "error");
+      .then(salas => {
+        const existe = salas.some(s => s.nombre.toLowerCase() === nombre.toLowerCase());
+        if (existe) {
+          mostrarAlerta("#msgSala", "Ya existe una sala con ese nombre.", "error");
+          return;
         }
-      })
-      .catch(() => mostrarAlerta("#msgSala", "Error de conexión", "error"));
+        // Si no existe, la agrega
+        fetch(`${API_URL}/salas`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.ok) {
+              mostrarAlerta("#msgSala", "Sala agregada correctamente", "exito");
+              setTimeout(() => mostrarAgregarSala(), 1500);
+            } else {
+              mostrarAlerta("#msgSala", data.error || "Error al agregar sala", "error");
+            }
+          })
+          .catch(() => mostrarAlerta("#msgSala", "Error de conexión", "error"));
+      });
   };
 }
-
-function mostrarAgregarPelicula() {
+function mostrarAgregarSala() {
   document.getElementById("contenido-empleado").innerHTML = `
-    <h3>Agregar Película</h3>
-    <form id="formAgregarPelicula">
-      <label>Título:</label>
-      <input type="text" id="tituloPelicula" required>
-      <label>Categoría:</label>
-      <input type="text" id="categoriaPelicula" required>
-      <button type="submit">Agregar Película</button>
+    <h3>Agregar Sala</h3>
+    <form id="formAgregarSala">
+      <label>Nombre de la sala:</label>
+      <input type="text" id="nombreSala" required>
+      <button type="submit">Agregar Sala</button>
     </form>
-    <div id="msgPelicula"></div>
+    <div id="msgSala"></div>
   `;
-
-  document.getElementById("formAgregarPelicula").onsubmit = function(e) {
+  document.getElementById("formAgregarSala").onsubmit = function(e) {
     e.preventDefault();
-    const titulo = document.getElementById("tituloPelicula").value.trim();
-    const categoria = document.getElementById("categoriaPelicula").value.trim();
-    fetch(`${API_URL}/peliculas`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titulo, categoria })
-    })
+    const nombre = document.getElementById("nombreSala").value.trim();
+
+    // Validar si ya existe una sala con ese nombre (case-insensitive)
+    fetch(`${API_URL}/salas`)
       .then(res => res.json())
-      .then(data => {
-        if (data.ok) {
-          mostrarAlerta("#msgPelicula", "Película agregada correctamente", "exito");
-          setTimeout(() => mostrarAgregarPelicula(), 1500);
-        } else {
-          mostrarAlerta("#msgPelicula", data.error || "Error al agregar película", "error");
+      .then(salas => {
+        const existe = salas.some(s => s.nombre.toLowerCase() === nombre.toLowerCase());
+        if (existe) {
+          mostrarAlerta("#msgSala", "Ya existe una sala con ese nombre.", "error");
+          return;
         }
-      })
-      .catch(() => mostrarAlerta("#msgPelicula", "Error de conexión", "error"));
+        // Si no existe, la agrega
+        fetch(`${API_URL}/salas`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.ok) {
+              mostrarAlerta("#msgSala", "Sala agregada correctamente", "exito");
+              setTimeout(() => mostrarAgregarSala(), 1500);
+            } else {
+              mostrarAlerta("#msgSala", data.error || "Error al agregar sala", "error");
+            }
+          })
+          .catch(() => mostrarAlerta("#msgSala", "Error de conexión", "error"));
+      });
   };
 }
 
@@ -801,8 +915,8 @@ function consultaPeliculaMenosVendida() {
 }
 
 // ========== BOLETOS COMPRADOS BONITO ==========
-function mostrarBoletosComprados() {
-  const funcionId = document.getElementById("funcionSeleccion").value;
+function mostrarBoletosComprados(funcionId) {
+  funcionId = funcionId || window.funcionSeleccionadaId;
   if (!funcionId || !usuarioId) {
     document.getElementById("boletosCompradosUsuario").innerHTML = "";
     return;

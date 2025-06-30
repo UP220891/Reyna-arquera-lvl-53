@@ -564,3 +564,51 @@ button.cerrar-sesion:hover {
     from { opacity: 0; transform: translateY(10px);}
     to { opacity: 1; transform: translateY(0);}
 }
+
+#funcionSeleccion {
+  background: linear-gradient(90deg, #6dd5ed 0%, #b721ff 100%);
+  color: #fff;
+  border: 2px solid #ffd600;
+  border-radius: 8px;
+  font-size: 1.1em;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 0 8px #b721ff99;
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+#funcionSeleccion:focus {
+  border: 2px solid #ffd600;
+  box-shadow: 0 0 16px #ffd60099;
+}
+#funcionSeleccion option {
+  color: #23283a;
+  background: #fff;
+}
+/* Agrega a estilos.css */
+.funcion-card {
+  background: linear-gradient(90deg, #6dd5ed 0%, #b721ff 100%);
+  color: #fff;
+  border: 2px solid #ffd600;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 10px 0;
+  box-shadow: 0 0 16px #b721ff55;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, border 0.2s;
+}
+.funcion-card:hover, .funcion-card.seleccionada {
+  border: 2.5px solid #ffd600;
+  box-shadow: 0 0 24px #ffd60099;
+  transform: scale(1.03);
+}
+.funcion-titulo {
+  font-size: 1.2em;
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: #ffd600;
+}
+.funcion-info {
+  font-size: 1em;
+  margin-bottom: 2px;
+}
