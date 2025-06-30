@@ -6,52 +6,58 @@
     <link rel="stylesheet" href="estilos.css">
 </head>
 <body onload="cargarPeliculas()">
-    <div id="login">
-        <h2>Iniciar Sesión</h2>
-        <input type="text" id="usuario" placeholder="Email">
-        <input type="password" id="contrasena" placeholder="Contraseña">
-        <button onclick="iniciarSesion()">Entrar</button>
-        <button onclick="registrar()">Registrar</button>
-    </div>
-<div id="registro" style="display:none;">
-        <h2>Registro</h2>
-        <input type="text" id="nombreRegistro" placeholder="Nombre">
-        <input type="text" id="emailRegistro" placeholder="Email">
-        <input type="password" id="contrasenaRegistro" placeholder="Contraseña">
-        <button onclick="registrarUsuario()">Registrar</button>
-        <button onclick="cancelarRegistro()">Cancelar</button>
-    </div>
+  <div id="login" class="login-card">
+    <h1 class="logo-login">Cineee</h1>
+    <h2 class="login-title">INICIAR SESIÓN</h2>
+    <input type="text" id="usuario" placeholder="Email" class="input-login">
+    <input type="password" id="contrasena" placeholder="Contraseña" class="input-login">
+    <button onclick="iniciarSesion()" class="btn-login">Entrar</button>
+    <button onclick="registrar()" class="btn-register">Registrarse</button>
+    <div id="msgLogin"></div>
+</div>
+<div id="registro" class="login-card" style="display:none;">
+    <h1 class="logo-login">Cineee</h1>
+    <h2 class="login-title">REGISTRO</h2>
+    <input type="text" id="nombreRegistro" placeholder="Nombre" class="input-login">
+    <input type="text" id="emailRegistro" placeholder="Email" class="input-login">
+    <input type="password" id="contrasenaRegistro" placeholder="Contraseña" class="input-login">
+    <button onclick="registrarUsuario()" class="btn-login">Registrar</button>
+    <button onclick="cancelarRegistro()" class="btn-register">Cancelar</button>
+    <div id="msgRegistro"></div>
+</div>
 <div id="panel-empleado" style="display:none;">
   <h2>Panel del Empleado</h2>
-  <button onclick="mostrarCrearUsuario()">CREAR USUARIO</button>
-  <button onclick="mostrarAgregarFuncion()">AGREGAR FUNCIÓN</button>
-  <button onclick="mostrarAgregarSala()">AGREGAR SALA</button>
-  <button onclick="mostrarAgregarPelicula()">AGREGAR PELÍCULA</button>
-  <button onclick="mostrarVentaEmpleado()">VENDER BOLETOS</button>
-  <button onclick="mostrarConsultas()">CONSULTAS Y REPORTES</button>
+  <button onclick="mostrarCrearUsuario()" class="btn-panel">CREAR USUARIO</button>
+  <button onclick="mostrarAgregarFuncion()" class="btn-panel">AGREGAR FUNCIÓN</button>
+  <button onclick="mostrarAgregarSala()" class="btn-panel">AGREGAR SALA</button>
+  <button onclick="mostrarAgregarPelicula()" class="btn-panel">AGREGAR PELÍCULA</button>
+  <button onclick="mostrarVentaEmpleado()" class="btn-panel">VENDER BOLETOS</button>
+  <button onclick="mostrarConsultas()" class="btn-panel">CONSULTAS Y REPORTES</button>
   <div id="contenido-empleado"></div>
 </div>
    <div id="salas" style="display:none;">
     <h2>Seleccione Función y Asientos</h2>
-    <select id="funcionSeleccion" onchange="generarAsientosUsuario()">
-        <option disabled selected>Seleccione función</option>
-        <!-- Opciones generadas por JS -->
-    </select>
+    <select id="funcionSeleccion"></select>
+    <div id="boletosCompradosUsuario"></div>
     <div id="infoFuncion"></div>
     <div id="asientosContainer"></div>
-    <button onclick="comprar()">Comprar</button>
+    <button onclick="comprar()" class="btn-action">Comprar</button>
+    <div id="msgCompra"></div>
 </div>
 
     <div id="ticket" style="display:none;">
         <h2>Boletos</h2>
         <p id="detallesBoleto"></p>
         <p id="totalPago"></p>
+       <button onclick="descargarPDF()" id="btnDescargarPDF" aria-label="Descargar boleto en PDF">Descargar PDF</button>
     </div>
 
     <div id="logout" style="display:none;">
         <button onclick="cerrarSesion()">Cerrar Sesión</button>
     </div>
 
-    <script src="script.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script src="script.js"></script>
 </body>
 </html>

@@ -6,6 +6,7 @@ const ventaSchema = new Schema({
   membresia: { type: Boolean, required: true, default: false },
   usuario: { type: Schema.Types.ObjectId, ref: 'Usuario', required: false },
   funcion: { type: Schema.Types.ObjectId, ref: 'Funcion', required: true },
+  pelicula: { type: Schema.Types.ObjectId, ref: 'Pelicula', required: true },
   asientos: [
     {
       fila: { type: String, required: true },
