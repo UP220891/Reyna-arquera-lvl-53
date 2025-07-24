@@ -78,7 +78,6 @@ function cerrarSesion() {
   document.getElementById("btnDescargarPDF").style.display = "none";
   document.getElementById("asientosContainer").innerHTML = "";
   window.funcionSeleccionadaId = null; // <-- Limpia la función seleccionada
-
 }
 
 // ========== USUARIO: SELECCIÓN DE FUNCIÓN Y ASIENTOS ==========
